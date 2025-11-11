@@ -34,13 +34,14 @@ It calculates the most efficient visiting order between addresses and provides a
 ---
 
 ## Project Structure
+```
 ├── app.py # Main Flask app
 ├── route_utils.py # Route optimization logic
 ├── templates/
 │ └── index.html # Web interface
 ├── static/
 │ └── style.css # Stylesheet
-
+```
 
 ---
 
