@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Neybor Route Planner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Brand CSS (with cache-buster) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ cachebuster }}">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+    defer
+  ></script>
+</head>
+<body>
+  <header class="nb-header">
+    <div class="nb-header-inner">
+      <a href="/" class="nb-logo-link" title="Neybor" aria-label="Neybor home">
+        <span class="nb-logo-wrap">
+          <!-- SVG fallback sits beneath the PNG; PNG covers it when available -->
+          <svg id="nbLogoSvg" class="nb-logo-svg" width="48" height="48" viewBox="0 0 24 24" role="img" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="g1" x1="0" x2="1">
+                <stop offset="0" stop-color="#00e0b8"/>
+                <stop offset="1" stop-color="#67f3d9"/>
+              </linearGradient>
+            </defs>
+            <rect width="24" height="24" rx="5" fill="url(#g1)" />
+            <path d="M6 10 L12 5 L18 10 V18 H14 V13 H10 V18 H6 Z" fill="#021214" />
+          </svg>
+          <img id="nbLogoImg" src="{{ url_for('static', filename='neybor-logo.png') }}" alt="Neybor" class="nb-logo" onerror="this.style.display='none'" />
+        </span>
+      </a>
+      <div class="nb-title-wrap">
+        <h1 class="nb-title">Route Planner</h1>
+        <p class="nb-subtitle">Build your visit itinerary, open in Google Maps, or export later.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="nb-app">
+    <section class="nb-panel">
+      <h2 class="nb-section-title">Stops</h2>
+      <p class="nb-muted">Paste/edit your houses JSON, pick the ones to visit, set Start/End, then <b>Optimize</b>.</p>
+
+      <label class="nb-label">Houses JSON</label>
+      <textarea id="housesText" class="nb-textarea">{{ default_houses | tojson(indent=2) }}</textarea>
+
+      <div class="nb-row">
+        <div>
+          <label class="nb-label">Start</label>
+          <select id="start" class="nb-select">
+            {% for h in default_houses %}
+              <option value="{{ h.name }}" {{ "selected" if h.name == start_default else "" }}>{{ h.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="nb-label">End</label>
+          <select id="end" class="nb-select">
+            {% for h in default_houses %}
+              <option value="{{ h.name }}" {{ "selected" if h.name == end_default else "" }}>{{ h.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <label class="nb-checkbox">
+        <input type="checkbox" id="auto" checked />
+        <span>Auto-optimize order (nearest-neighbor + 2-opt)</span>
+      </label>
+
+      <div id="houseChecks" class="nb-list"></div>
+
+      <div class="nb-actions">
+        <button class="nb-btn nb-btn-secondary" id="selectAll">Select all</button>
+        <button class="nb-btn nb-btn-ghost" id="clearAll">Clear all</button>
+        <button class="nb-btn" id="optimize">Optimize</button>
+        <a class="nb-btn nb-btn-outline" id="gmaps" href="#" target="_blank" rel="noreferrer" style="display:none;">Open in Google Maps</a>
+      </div>
+
+      <p class="nb-muted" id="distance"></p>
+    </section>
+
+    <section class="nb-map-panel">
+      <div id="map" class="nb-map"></div>
+    </section>
+  </main>
+
+  <footer class="nb-footer">
+    <span class="nb-muted">Straight-line distance shown for optimization. Use the Google Maps link for real road routing.</span>
+  </footer>
+
+  <script>
+    // Logo fallback: hide SVG when PNG loads successfully; show SVG if PNG fails or is empty
+    (function() {
+      function ensureLogo() {
+        const img = document.getElementById('nbLogoImg');
+        const svg = document.getElementById('nbLogoSvg');
+        if (!img || !svg) return;
+        // If image already loaded and has dimensions, hide the svg
+        if (img.complete && img.naturalWidth && img.naturalHeight) {
+          svg.style.display = 'none';
+          return;
+        }
+        // On load, hide the svg
+        img.addEventListener('load', () => { svg.style.display = 'none'; });
+        // On error, ensure svg is visible
+        img.addEventListener('error', () => { svg.style.display = 'block'; img.style.display = 'none'; });
+        // If the img src is empty or data-URI invalid, show svg
+        if (!img.src) { svg.style.display = 'block'; img.style.display = 'none'; }
+      }
+      window.addEventListener('DOMContentLoaded', ensureLogo);
+    })();
+
+    let map, layerLine, layerMarkers = [];
+
+    function initMap(center=[50.8466, 4.3528], zoom=13) {
+      map = L.map('map', { zoomControl: false }).setView(center, zoom);
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+    }
+
+    function setRouteOnMap(points) {
+      if (layerLine) map.removeLayer(layerLine);
+      layerMarkers.forEach(m => map.removeLayer(m));
+      layerMarkers = [];
+      if (!points || points.length === 0) return;
+
+      const latlngs = points.map(p => [p.lat, p.lon]);
+      layerLine = L.polyline(latlngs, { weight: 4 }).addTo(map);
+
+      points.forEach((p, idx) => {
+        const m = L.circleMarker([p.lat, p.lon], { radius: 8 })
+          .addTo(map)
+          .bindPopup(`<b>${idx + 1}. ${p.name}</b><br/><span class="nb-micro">${p.address ?? ""}</span>`);
+        layerMarkers.push(m);
+      });
+
+      map.fitBounds(layerLine.getBounds(), { padding: [32, 32] });
+    }
+
+    function parseHouses() {
+      try {
+        const arr = JSON.parse(document.getElementById('housesText').value);
+        if (!Array.isArray(arr)) throw new Error("Must be an array");
+        return arr;
+      } catch (e) {
+        alert("Invalid JSON for houses.");
+        throw e;
+      }
+    }
+
+    function renderHouseChecks(houses) {
+      const wrap = document.getElementById('houseChecks');
+      wrap.innerHTML = "";
+      houses.forEach(h => {
+        const id = 'chk_' + btoa(h.name).replace(/=/g,'');
+        const row = document.createElement('label');
+        row.className = "nb-list-item";
+        row.innerHTML = `
+          <input type="checkbox" id="${id}" checked />
+          <div class="nb-list-text">
+            <div class="nb-list-title">${h.name}
+              <span class="nb-badge">${h.lat.toFixed(5)}, ${h.lon.toFixed(5)}</span>
+            </div>
+            <div class="nb-list-sub">${h.address ?? ""}</div>
+          </div>
+        `;
+        wrap.appendChild(row);
+      });
+    }
+
+    function getSelectedHouses(all) {
+      const wrap = document.getElementById('houseChecks');
+      const checks = wrap.querySelectorAll('input[type="checkbox"]');
+      const selected = [];
+      checks.forEach((chk, i) => { if (chk.checked) selected.push(all[i]); });
+      return selected;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const houses = parseHouses();
+      renderHouseChecks(houses);
+      initMap([houses[0]?.lat || 50.8466, houses[0]?.lon || 4.3528]);
+
+      document.getElementById('selectAll').onclick = () => {
+        document.querySelectorAll('#houseChecks input[type="checkbox"]').forEach(c => c.checked = true);
+      };
+      document.getElementById('clearAll').onclick = () => {
+        document.querySelectorAll('#houseChecks input[type="checkbox"]').forEach(c => c.checked = false);
+      };
+
+      document.getElementById('optimize').onclick = async () => {
+        const start = document.getElementById('start').value;
+        const end = document.getElementById('end').value;
+        const auto = document.getElementById('auto').checked;
+        const all = parseHouses();
+        const selected = getSelectedHouses(all);
+        if (selected.length < 2) { alert("Select at least two houses."); return; }
+
+        const res = await fetch('/optimize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ houses: selected, start_name: start, end_name: end, auto_optimize: auto })
+        }).then(r => r.json());
+
+        setRouteOnMap(res.ordered);
+        document.getElementById('distance').textContent =
+          `Total straight-line distance: ${res.distance_km.toFixed(2)} km`;
+
+        const link = document.getElementById('gmaps');
+        if (res.google_maps_url) { link.href = res.google_maps_url; link.style.display = 'inline-flex'; }
+        else { link.style.display = 'none'; }
+      };
+    });
+  </script>
+</body>
+</html>
