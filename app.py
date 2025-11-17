@@ -33,7 +33,17 @@ DEFAULT_HOUSES = [
     {"name": "Leopold 1", "address": "Rue Vandenbroeck 1", "lat": 50.835676118178, "lon": 4.374911192465664, "is_airbnb": False},
     {"name": "Leopold 55", "address": "Rue du Chateau 55", "lat": 50.83131861580924, "lon": 4.380596035899892, "is_airbnb": False},
     {"name": "Neybor Office", "address": "Chaussée de Boondael 365, Ixelles 1050", "lat": 50.8177318, "lon": 4.3864221, "is_airbnb": False},
+    {"name": "Duden 26", "address": "Rue Egide Walschaerts 26, Saint-Gilles 1060", "lat": 50.826828311543565, "lon": 4.33677586917812, "is_airbnb": True},
+    {"name": "Louise 32", "address": "Rue Jourdan 32, Saint-Gilles 1060", "lat": 50.83428780731322, "lon": 4.354435782671721, "is_airbnb": True},
+    {"name": "Duden 3", "address": "Avenue Reine Marie-Henriette 3, Forest 1190", "lat": 50.82345878988992, "lon": 4.33436130965701, "is_airbnb": True},
+    {"name": "Congres 46", "address": "Rue de la Croix de Fer 46, Brussels 1000", "lat": 50.848541593328044, "lon": 4.365480126851019, "is_airbnb": True},
+    {"name": "Congres 22", "address": "Rue de la Tribune 22, Brussels 1000", "lat": 50.84854488903282, "lon": 4.365122150137942, "is_airbnb": True},
+    {"name": "Chatelin 63", "address": "Rue de Florence 63, 1060 Saint-Gilles", "lat": 50.82881048643311, "lon": 4.35739712684958, "is_airbnb": False},
+    {"name": "Colignon 39", "address": "Rue Emmanuel Hiel 39, 1030 Schaerbeek", "lat": 50.86635253901819, "lon": 4.371428511509731, "is_airbnb": False},
+    {"name": "Flagey 33", "address": "Rue Wéry 33, 1050 Ixelles", "lat": 50.83133348701857, "lon": 4.3755055384932175, "is_airbnb": False},
+    {"name": "Montgomery 17", "address": "Rue de la Duchesse 17, 1150 Woluwe-Saint-Pierre", "lat": 50.838650744291066, "lon": 4.406603980822448, "is_airbnb": False},
 ]
+
 START_DEFAULT = "Neybor Office"
 END_DEFAULT   = "Neybor Office"
 
@@ -109,12 +119,6 @@ def _try_pyngrok():
         return False
 
 if __name__ == "__main__":
-    used = _try_flask_ngrok(app)
-    if used:
-        app.run()
-    else:
-        if _try_pyngrok():
-            app.run()
-        else:
-            print("⚠️ Running locally only. Install flask-ngrok or pyngrok to expose publicly.")
-            app.run()
+    # Ngrok disabled - just run Flask locally
+    print("✅ Neybor Route Planner running at http://127.0.0.1:5000")
+    app.run(debug=True)
