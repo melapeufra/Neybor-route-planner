@@ -116,13 +116,22 @@ body {
 
 /* List of houses */
 .nb-list {
-  max-height: 220px; overflow: auto;
-  border: 1px solid var(--nb-border); border-radius: 12px; padding: 6px; margin-top: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--nb-border);
+  border-radius: 12px;
+  padding: 6px;
+  margin-top: 8px;
   background: var(--nb-surface);
+  display: block;
 }
+
 .nb-list-item {
   display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start;
   padding: 8px; border-radius: 10px; transition: background .15s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 .nb-list-item:hover { background: color-mix(in oklch, var(--nb-surface) 80%, var(--nb-accent) 7%); }
 .nb-list-title { font-weight: 600; display: flex; align-items: center; gap: 6px; }
