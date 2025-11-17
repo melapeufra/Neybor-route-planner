@@ -170,10 +170,12 @@
     function renderHouseChecks(houses) {
       const wrap = document.getElementById('houseChecks');
       wrap.innerHTML = "";
+      console.log('Rendering', houses.length, 'houses');
       houses.forEach(h => {
         const id = 'chk_' + btoa(h.name).replace(/=/g,'');
         const row = document.createElement('label');
         row.className = "nb-list-item";
+        row.style.display = 'grid';
         row.innerHTML = `
           <input type="checkbox" id="${id}" checked />
           <div class="nb-list-text">
@@ -185,6 +187,7 @@
         `;
         wrap.appendChild(row);
       });
+      console.log('Rendered', wrap.children.length, 'items');
     }
 
     function getSelectedHouses(all) {
