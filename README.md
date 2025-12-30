@@ -17,7 +17,7 @@ It calculates the most efficient visiting order between addresses and provides a
 - Interactive frontend (via `index.html` in `/templates`)
 - Can be exposed publicly using **ngrok** or **pyngrok**
 
-- ![Neybor Route Optimizer Map](map_itinerary.png)
+- ![Neybor Route Optimizer Map](maps_itinerary.png)
 
 ---
 
